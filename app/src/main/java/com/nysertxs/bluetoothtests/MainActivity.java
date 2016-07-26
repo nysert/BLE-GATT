@@ -13,10 +13,12 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -29,10 +31,6 @@ public class MainActivity extends Activity {
     Button stopFindDevicesBtn;
 
     public static final int REQUEST_BLUETOOTH = 1;
-
-    public static final UUID uuid = UUID.fromString("efa03c96-79c0-4751-b99c-b806699b55ff");
-
-    boolean discover = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,16 +51,8 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Turning on Bluetooth", Toast.LENGTH_LONG).show();
         }
 
-        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
+        final Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
         devices = new ArrayList<>();
-
-//        if (pairedDevices.size() > 0) {
-//            for (BluetoothDevice device : pairedDevices) {
-//                Device newDevice = new Device(device.getName(),device.getAddress(),"false");
-//                devices.add(newDevice);
-//                Log.e("paired device", newDevice.getDeviceName());
-//            }
-//        }
 
         findDevicesBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -78,34 +68,18 @@ public class MainActivity extends Activity {
                 if (bluetoothAdapter.isDiscovering()){
                     //Log.e("discovering", "true");
                 }
-
-//                ConnectThread connectThread = new ConnectThread();
-//                if (devices.size() >= 1) {
-//                    boolean connected = false;
-//                    if (devices.get(1).getName() == "Nexus 6") {
-//                        connected = connectThread.connect(devices.get(1), uuid);
-//                    }
-//                    if (devices.get(0).getName() == "Nexus 6") {
-//                        connected = connectThread.connect(devices.get(0), uuid);
-//                    }
-//
-//                    if (connected) {
-//
-//                    }
-//                }
-                ServerConnectThread serverConnectThread = new ServerConnectThread();
-                serverConnectThread.acceptConnect(bluetoothAdapter, uuid);
             }
         });
 
         stopFindDevicesBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (bluetoothAdapter.isDiscovering()) {
-                    Log.e("discovering", "false");
-                    bluetoothAdapter.cancelDiscovery();
-                    unregisterReceiver(receiver);
+                ArrayList<BluetoothDevice> bluetoothDevices = new ArrayList<BluetoothDevice>();
+                for (BluetoothDevice device : pairedDevices) {
+                    bluetoothDevices.add(device);
                 }
+                Log.e("hrm", bluetoothDevices.get(0).getName());
+                new H7ConnectThread(bluetoothDevices.get(0),v.getContext());
             }
         });
 
@@ -124,4 +98,5 @@ public class MainActivity extends Activity {
             Log.e("receiver", "intentReceiver finished");
         }
     };
+
 }
