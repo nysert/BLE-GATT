@@ -17,6 +17,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Toast;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +31,9 @@ public class MainActivity extends Activity {
     Button findDevicesBtn;
     Button stopFindDevicesBtn;
 
-    public static final int REQUEST_BLUETOOTH = 1;
+    IntentFilter filter;
+
+    H7ConnectThread h7ConnectThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,19 +57,24 @@ public class MainActivity extends Activity {
         final Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
         devices = new ArrayList<>();
 
+        final ArrayList<BluetoothDevice> bluetoothDevices = new ArrayList<BluetoothDevice>();
+        for (BluetoothDevice device : pairedDevices) {
+            bluetoothDevices.add(device);
+        }
+//        Log.e("paired 0", bluetoothDevices.get(0).getName());
+        //h7ConnectThread = new H7ConnectThread(bluetoothDevices.get(0),getApplication().getApplicationContext());
+
         findDevicesBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                IntentFilter filter = new IntentFilter();
-                filter.addAction(BluetoothDevice.ACTION_FOUND);
-                filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-                filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-                registerReceiver(receiver, filter);
+                //unpairDevice(bluetoothDevices.get(0));
+//                Log.e("paired 0", bluetoothDevices.get(0).getName());
 
-                bluetoothAdapter.startDiscovery();
-                if (bluetoothAdapter.isDiscovering()){
-                    //Log.e("discovering", "true");
+                if (devices.size() > 0) {
+                    h7ConnectThread = new H7ConnectThread(devices.get(0),getApplication().getApplicationContext());
+                    h7ConnectThread.start();
+                    //pairDevice(devices.get(0));
                 }
             }
         });
@@ -74,29 +82,69 @@ public class MainActivity extends Activity {
         stopFindDevicesBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ArrayList<BluetoothDevice> bluetoothDevices = new ArrayList<BluetoothDevice>();
-                for (BluetoothDevice device : pairedDevices) {
-                    bluetoothDevices.add(device);
-                }
-                Log.e("hrm", bluetoothDevices.get(0).getName());
-                new H7ConnectThread(bluetoothDevices.get(0),v.getContext());
+                searchForDevices();
+                //h7ConnectThread.cancel();
             }
         });
+    }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(receiver);
+    }
+
+    private void pairDevice(BluetoothDevice device) {
+        try {
+            Log.d("pairDevice()", "Start Pairing...");
+            Method m = device.getClass().getMethod("createBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+            Log.d("pairDevice()", "Pairing finished.");
+        } catch (Exception e) {
+            Log.e("pairDevice()", e.getMessage());
+        }
+    }
+
+    private void unpairDevice(BluetoothDevice device) {
+        try {
+            Log.d("unpairDevice()", "Start Un-Pairing...");
+            Method m = device.getClass().getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+            Log.d("unpairDevice()", "Un-Pairing finished.");
+        } catch (Exception e) {
+            Log.e("unpair", e.getMessage());
+        }
+    }
+
+    private void searchForDevices() {
+        devices.clear();
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_FOUND);
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+        filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        registerReceiver(receiver, filter);
+
+        bluetoothAdapter.startDiscovery();
     }
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
-        @Override
+      @Override
         public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (BluetoothDevice.ACTION_FOUND.equals(action) && bluetoothAdapter.isDiscovering()) {
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                devices.add(device);
+          String action = intent.getAction();
+          if (BluetoothDevice.ACTION_FOUND.equals(action) && bluetoothAdapter.isDiscovering()) {
 
-                Log.e("device", device.getName());
-            }
-            Log.e("receiver", "intentReceiver finished");
-        }
+              try {
+                  BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                  devices.add(device);
+
+                  Log.e("device", device.getName());
+                  Log.e("receiver", "intentReceiver finished");
+              } catch (Exception e) {
+                  e.printStackTrace();
+              }
+          }
+      }
     };
 
 }

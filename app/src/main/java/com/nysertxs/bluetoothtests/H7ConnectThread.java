@@ -23,7 +23,15 @@ public class H7ConnectThread extends Thread {
 
     public static final String HRUUID = "0000180D-0000-1000-8000-00805F9B34FB";
 
+    private BluetoothDevice device;
+    private Context context;
+
     public H7ConnectThread(BluetoothDevice device, Context context) {
+        this.device = device;
+        this.context = context;
+    }
+
+    public void start() {
         Log.i("H7ConnectThread", "Starting H7 reader BTLE");
         gatt = device.connectGatt(context, false, btleGattCallback); // Connect to the device and store the server (gatt)
     }
